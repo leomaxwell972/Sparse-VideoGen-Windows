@@ -1,13 +1,17 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <string>
 
-#include "flashinfer/layout.cuh"
-#include "flashinfer/math.cuh"
-#include "flashinfer/utils.cuh"
+//#include "flashinfer/layout.cuh"
+//#include "flashinfer/math.cuh"
+//#include "flashinfer/utils.cuh"
+// The original flashinfer headers cause conflicts with the Windows
+// toolchain.  Only the lightweight vector helpers are required here.
+// Other flashinfer utilities are omitted for compatibility.
 #include "flashinfer/vec_dtypes.cuh"
 
 using namespace flashinfer;
@@ -62,7 +66,9 @@ __global__ void ApplyQKRotaryCosSinCacheInPlaceKernel(DType* q,
 	const uint32_t tx = threadIdx.x, ty = threadIdx.y;
 	const uint32_t bdy = blockDim.y;
 
-	const uint32_t valid_seq_len = max(0, stride_seq_len - skip_seq_len);
+	const uint32_t valid_seq_len = (stride_seq_len > skip_seq_len)
+		? (stride_seq_len - skip_seq_len)
+		: 0;
 	const uint32_t cur_seq_len = by * bdy + ty;
 
 	vec_t<float, vec_size> cos, sin;
@@ -105,7 +111,8 @@ void ApplyQKRotaryCosSinCacheInPlace(DType* q,
 									 uint32_t head_dim,
 									 cudaStream_t stream) {
 	DISPATCH_HEAD_DIM(head_dim, HEAD_DIM, {
-		constexpr uint32_t vec_size = std::max(16 / sizeof(DType), HEAD_DIM / 32);
+		constexpr uint32_t vec_size =
+			std::max<uint32_t>(16u / static_cast<uint32_t>(sizeof(DType)), HEAD_DIM / 32);
 		constexpr uint32_t bdx = HEAD_DIM / vec_size;
 		uint32_t num_threads = std::max(128U, bdx);
 		uint32_t bdy = num_threads / bdx;

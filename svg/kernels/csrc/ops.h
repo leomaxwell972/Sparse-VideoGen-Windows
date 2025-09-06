@@ -3,6 +3,8 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <ATen/cuda/CUDAEvent.h>
 #include <torch/extension.h>
+#include <cassert>
+#include <cstdint>
 
 #include "norm/narrow_layer_norm.cuh"
 #include "norm/narrow_rms_norm.cuh"
